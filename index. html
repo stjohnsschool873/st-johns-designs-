@@ -1,0 +1,427 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>St. John's Poster Studio</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Montserrat:wght@400;700&family=Roboto:wght@400;700&family=Oswald:wght@400;600&family=Bebas+Neue&family=Playfair+Display:wght@400;700&family=Lato:wght@400;700&family=Raleway:wght@400;700&family=Nunito:wght@400;700&family=Pacifico&family=Noto+Sans+Malayalam:wght@400;700&family=Manjari:wght@400;700&family=Anek+Malayalam:wght@400;700&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ font-family:Poppins,sans-serif;
+ background:#eef1f7;
+ color:#172033;
+}
+header{
+ background:#172554;
+ color:white;
+ padding:17px;
+ text-align:center;
+}
+header h2{margin:0;font-size:21px}
+header p{margin:4px;font-size:11px;color:#cbd5e1}
+.toolbar{
+ display:flex;
+ flex-wrap:wrap;
+ justify-content:center;
+ gap:8px;
+ padding:12px;
+ background:white;
+ position:sticky;
+ top:0;
+ z-index:10;
+ box-shadow:0 2px 8px #0001;
+}
+button,select,input{
+ font-family:inherit;
+}
+button{
+ border:0;
+ background:#2563eb;
+ color:white;
+ padding:10px 13px;
+ border-radius:7px;
+ cursor:pointer;
+ font-size:12px;
+}
+button:hover{opacity:.85}
+.secondary{background:#475569}
+.danger{background:#dc2626}
+.panel{
+ background:white;
+ padding:12px;
+ margin:12px;
+ border-radius:12px;
+ display:flex;
+ flex-wrap:wrap;
+ justify-content:center;
+ align-items:center;
+ gap:9px;
+}
+.panel input,.panel select{
+ border:1px solid #cbd5e1;
+ padding:9px;
+ border-radius:7px;
+ max-width:100%;
+}
+label{font-size:12px}
+.workspace{
+ padding:12px;
+ display:flex;
+ justify-content:center;
+ align-items:flex-start;
+}
+.canvasbox{
+ background:white;
+ padding:8px;
+ border-radius:9px;
+ box-shadow:0 4px 20px #0002;
+ width:min(100%,650px);
+}
+.canvasbox canvas{
+ max-width:100%;
+ height:auto;
+}
+footer{
+ text-align:center;
+ color:#64748b;
+ font-size:11px;
+ padding:18px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>ST. JOHN'S SCHOOL</h2>
+<p>ONLINE POSTER CREATOR STUDIO</p>
+</header>
+
+<div class="toolbar">
+<button onclick="addText()">＋ Add Text</button>
+<button onclick="document.getElementById('photo').click()">＋ Add Photo</button>
+<button onclick="addRect()">Rectangle</button>
+<button onclick="addCircle()">Circle</button>
+<button onclick="addTriangle()">Triangle</button>
+<button class="secondary" onclick="undo()">↶ Undo</button>
+<button class="secondary" onclick="redo()">↷ Redo</button>
+<button class="danger" onclick="deleteSelected()">Delete</button>
+</div>
+
+<div class="panel">
+<label>Poster Size</label>
+<select id="size" onchange="changeSize()">
+<option value="a4">A4 Portrait</option>
+<option value="square">Instagram Square</option>
+<option value="story">Instagram Story</option>
+<option value="landscape">Landscape</option>
+</select>
+
+<label>Background</label>
+<input type="color" value="#ffffff" onchange="changeBG(this.value)">
+
+<label>Font</label>
+<select id="font" onchange="changeFont(this.value)">
+<option>Poppins</option>
+<option>Montserrat</option>
+<option>Roboto</option>
+<option>Oswald</option>
+<option>Bebas Neue</option>
+<option>Playfair Display</option>
+<option>Lato</option>
+<option>Raleway</option>
+<option>Nunito</option>
+<option>Pacifico</option>
+<option>Noto Sans Malayalam</option>
+<option>Manjari</option>
+<option>Anek Malayalam</option>
+</select>
+
+<label>Text Colour</label>
+<input type="color" value="#111111" onchange="changeTextColor(this.value)">
+
+<label>Text Size</label>
+<input type="number" id="fontSize" value="40" min="8" max="300" onchange="changeFontSize(this.value)" style="width:75px">
+
+<button class="secondary" onclick="toggleBold()">Bold</button>
+<button class="secondary" onclick="toggleItalic()">Italic</button>
+<button class="secondary" onclick="alignText('left')">Left</button>
+<button class="secondary" onclick="alignText('center')">Center</button>
+<button class="secondary" onclick="alignText('right')">Right</button>
+</div>
+
+<input type="file" id="photo" accept="image/*" hidden onchange="addPhoto(event)">
+
+<div class="workspace">
+<div class="canvasbox">
+<canvas id="poster"></canvas>
+</div>
+</div>
+
+<div class="panel">
+<button onclick="duplicate()">Duplicate</button>
+<button class="secondary" onclick="bringForward()">Bring Forward</button>
+<button class="secondary" onclick="sendBackward()">Send Backward</button>
+<button onclick="downloadPNG()">Download PNG</button>
+<button onclick="downloadJPG()">Download JPG</button>
+<button onclick="window.print()">Print / Save PDF</button>
+<button class="danger" onclick="clearPoster()">Clear Poster</button>
+</div>
+
+<footer>
+ST. JOHN'S SCHOOL POSTER STUDIO<br>
+Create • Design • Download
+</footer>
+
+<script>
+const canvas = new fabric.Canvas('poster',{
+ backgroundColor:'#ffffff',
+ preserveObjectStacking:true,
+ selection:true
+});
+
+canvas.setWidth(800);
+canvas.setHeight(1131);
+
+let history=[];
+let historyIndex=-1;
+let restoring=false;
+
+function saveHistory(){
+ if(restoring)return;
+ const state=JSON.stringify(canvas.toJSON());
+ if(history[historyIndex]===state)return;
+ history=history.slice(0,historyIndex+1);
+ history.push(state);
+ historyIndex++;
+ if(history.length>40){
+  history.shift();
+  historyIndex--;
+ }
+}
+
+function restoreState(index){
+ if(index<0||index>=history.length)return;
+ restoring=true;
+ canvas.loadFromJSON(history[index],()=>{
+  canvas.renderAll();
+  restoring=false;
+ });
+ historyIndex=index;
+}
+
+function undo(){restoreState(historyIndex-1)}
+function redo(){restoreState(historyIndex+1)}
+
+canvas.on('object:added',saveHistory);
+canvas.on('object:modified',saveHistory);
+canvas.on('object:removed',saveHistory);
+
+function addText(){
+ const text=new fabric.Textbox('Double tap to edit',{
+  left:120,top:120,width:550,
+  fontSize:40,
+  fontFamily:'Poppins',
+  fill:'#111111',
+  editable:true
+ });
+ canvas.add(text);
+ canvas.setActiveObject(text);
+ canvas.renderAll();
+}
+
+function addRect(){
+ const obj=new fabric.Rect({
+  left:150,top:150,width:250,height:150,
+  fill:'#2563eb',rx:8,ry:8
+ });
+ canvas.add(obj);
+ canvas.setActiveObject(obj);
+}
+
+function addCircle(){
+ const obj=new fabric.Circle({
+  left:200,top:200,radius:80,
+  fill:'#f59e0b'
+ });
+ canvas.add(obj);
+ canvas.setActiveObject(obj);
+}
+
+function addTriangle(){
+ const obj=new fabric.Triangle({
+  left:200,top:200,width:150,height:150,
+  fill:'#10b981'
+ });
+ canvas.add(obj);
+ canvas.setActiveObject(obj);
+}
+
+function addPhoto(event){
+ const file=event.target.files[0];
+ if(!file)return;
+ const reader=new FileReader();
+ reader.onload=function(e){
+  fabric.Image.fromURL(e.target.result,function(img){
+   img.scaleToWidth(350);
+   img.set({left:100,top:100});
+   canvas.add(img);
+   canvas.setActiveObject(img);
+   canvas.renderAll();
+  });
+ };
+ reader.readAsDataURL(file);
+ event.target.value='';
+}
+
+function changeBG(color){
+ canvas.setBackgroundColor(color,canvas.renderAll.bind(canvas));
+ saveHistory();
+}
+
+function getActive(){
+ return canvas.getActiveObject();
+}
+
+function changeFont(font){
+ const obj=getActive();
+ if(!obj)return;
+ if(obj.type==='textbox'||obj.type==='i-text'||obj.type==='text'){
+  document.fonts.load('20px "'+font+'"').then(()=>{
+   obj.set('fontFamily',font);
+   canvas.renderAll();
+   saveHistory();
+  });
+ }
+}
+
+function changeTextColor(color){
+ const obj=getActive();
+ if(!obj)return;
+ if(obj.type==='textbox'||obj.type==='i-text'||obj.type==='text'){
+  obj.set('fill',color);
+ }else{
+  obj.set('fill',color);
+ }
+ canvas.renderAll();
+ saveHistory();
+}
+
+function changeFontSize(size){
+ const obj=getActive();
+ if(!obj)return;
+ obj.set('fontSize',Number(size));
+ canvas.renderAll();
+ saveHistory();
+}
+
+function toggleBold(){
+ const obj=getActive();
+ if(!obj)return;
+ obj.set('fontWeight',
+ obj.fontWeight==='bold'?'normal':'bold');
+ canvas.renderAll();
+ saveHistory();
+}
+
+function toggleItalic(){
+ const obj=getActive();
+ if(!obj)return;
+ obj.set('fontStyle',
+ obj.fontStyle==='italic'?'normal':'italic');
+ canvas.renderAll();
+ saveHistory();
+}
+
+function alignText(value){
+ const obj=getActive();
+ if(!obj)return;
+ obj.set('textAlign',value);
+ canvas.renderAll();
+ saveHistory();
+}
+
+function deleteSelected(){
+ const obj=getActive();
+ if(!obj)return;
+ canvas.remove(obj);
+ canvas.discardActiveObject();
+ canvas.renderAll();
+}
+
+function duplicate(){
+ const obj=getActive();
+ if(!obj)return;
+ obj.clone(function(copy){
+  copy.set({
+   left:obj.left+25,
+   top:obj.top+25
+  });
+  canvas.add(copy);
+  canvas.setActiveObject(copy);
+  canvas.renderAll();
+ });
+}
+
+function bringForward(){
+ const obj=getActive();
+ if(obj){canvas.bringForward(obj);canvas.renderAll();saveHistory();}
+}
+
+function sendBackward(){
+ const obj=getActive();
+ if(obj){canvas.sendBackwards(obj);canvas.renderAll();saveHistory();}
+}
+
+function changeSize(){
+ const size=document.getElementById('size').value;
+ const sizes={
+  a4:[800,1131],
+  square:[1000,1000],
+  story:[800,1422],
+  landscape:[1131,800]
+ };
+ const s=sizes[size];
+ canvas.setDimensions({width:s[0],height:s[1]});
+ canvas.renderAll();
+ saveHistory();
+}
+
+function clearPoster(){
+ if(!confirm('Clear the entire poster?'))return;
+ canvas.clear();
+ canvas.setBackgroundColor('#ffffff',canvas.renderAll.bind(canvas));
+ saveHistory();
+}
+
+function downloadPNG(){
+ const url=canvas.toDataURL({format:'png',multiplier:2});
+ downloadFile(url,'school-poster.png');
+}
+
+function downloadJPG(){
+ const url=canvas.toDataURL({
+  format:'jpeg',quality:0.95,multiplier:2
+ });
+ downloadFile(url,'school-poster.jpg');
+}
+
+function downloadFile(url,name){
+ const a=document.createElement('a');
+ a.href=url;
+ a.download=name;
+ a.click();
+}
+
+saveHistory();
+</script>
+
+</body>
+</html>
